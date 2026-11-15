@@ -1,8 +1,8 @@
-# vetis-rewrite
+# vetis-redir
 
-[![Crates.io downloads](https://img.shields.io/crates/d/vetis-rewrite)](https://crates.io/crates/vetis-rewrite) [![crates.io](https://img.shields.io/crates/v/vetis-rewrite?style=flat-square)](https://crates.io/crates/vetis-rewrite) [![Build Status](https://github.com/vetis-server/vetis-rewrite/actions/workflows/rust.yml/badge.svg?event=push)](https://github.com/vetis-server/vetis-rewrite/actions/workflows/rust.yml) ![Crates.io MSRV](https://img.shields.io/crates/msrv/vetis-rewrite) [![Documentation](https://docs.rs/vetis-rewrite/badge.svg)](https://docs.rs/vetis-rewrite/latest/vetis-rewrite) [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/vetis-server/vetis-rewrite/blob/main/LICENSE.md)  [![codecov](https://codecov.io/gh/vetis-server/vetis-rewrite/graph/badge.svg?token=T0HSBAPVSI)](https://codecov.io/gh/vetis-server/vetis-rewrite)
+[![Crates.io downloads](https://img.shields.io/crates/d/vetis-redir)](https://crates.io/crates/vetis-redir) [![crates.io](https://img.shields.io/crates/v/vetis-redir?style=flat-square)](https://crates.io/crates/vetis-redir) [![Build Status](https://github.com/vetis-server/vetis-redir/actions/workflows/rust.yml/badge.svg?event=push)](https://github.com/vetis-server/vetis-redir/actions/workflows/rust.yml) ![Crates.io MSRV](https://img.shields.io/crates/msrv/vetis-redir) [![Documentation](https://docs.rs/vetis-redir/badge.svg)](https://docs.rs/vetis-redir/latest/vetis-redir) [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/vetis-server/vetis-redir/blob/main/LICENSE.md)  [![codecov](https://codecov.io/gh/vetis-server/vetis-redir/graph/badge.svg?token=T0HSBAPVSI)](https://codecov.io/gh/vetis-server/vetis-redir)
 
-vetis-rewrite adds diffent rewrite types for your host path, choose the most appropriate one for your usecase!
+vetis-redir adds diffent rewrite types for your host path, choose the most appropriate one for your usecase!
 
 ## Features
 
@@ -14,7 +14,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-vetis-rewrite = "0.1.0"
+vetis-redir = "0.1.0"
 ```
 
 ## Configuration
@@ -27,24 +27,25 @@ on vetis.
 #### Using API
 
 ```rust,ignore
-use vetis_log::StdoutLogConfig;
-use log::Level;
+use vetis_redir::HookConfig as RedirHookConfig;
 
-let config = StdoutLogConfig::builder()
-    .log_leve(Level::Info)
+let config = RedirHookConfig::builder()
     .build()?;
 ```
 
 #### vetis.yaml
 
 ```yaml
-dest: stdout
-log_level: "INFO"
+- name: "redir"
+  matcher:
+    type: "path"
+    paths:
+      - "/protected*"
 ```
 
 #### Configuration Options
 
-- **log_level**: Log level: TRACE, WARN, DEBUG, INFO, ERROR and FATAL
+- **matcher**: If set, this hook will be only called if request meet the criteria defined by him, otherwise, all requests will call this hook (optional)
 
 ### Runtime Features
 
