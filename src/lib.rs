@@ -1,12 +1,16 @@
 #![doc = include_str!("../README.md")]
 #![deny(missing_docs)]
+
+use ::http::header::LOCATION;
 use cel::Context;
 use compact_str::ToCompactString;
+use http::{HeaderValue, StatusCode};
 use serde::{Deserialize, Serialize};
 use vetis::{
-    Request, Response, VetisFutureResult, VetisHook, VetisResult,
+    HookPhases, Request, Response, Str, VetisFutureResult, VetisHook, VetisResult,
     errors::{ConfigError, VetisError},
     hook::{Hook, HookConfig, HookPhase},
+    make_bitflags,
     matcher::{Matcher, MatcherConfig},
 };
 
@@ -15,12 +19,13 @@ mod tests;
 
 /// Builder for creating `RedirHookConfig` instances.
 #[derive(Deserialize)]
-pub struct RedirHookConfigBuilder {
+pub struct RedirHookConfigBuilder<'a> {
     matcher: Option<Box<dyn MatcherConfig>>,
-    target: String,
+    target: &'a str,
+    code: &'a str,
 }
 
-impl RedirHookConfigBuilder {
+impl<'a> RedirHookConfigBuilder<'a> {
     /// Allow set a matcher
     ///
     /// # Returns
@@ -39,8 +44,8 @@ impl RedirHookConfigBuilder {
     /// # Returns
     ///
     /// * `Self` - The builder.
-    pub fn target(mut self, target: &str) -> Self {
-        self.target = target.to_string();
+    pub fn target(mut self, target: &'a str) -> Self {
+        self.target = target;
         self
     }
 
@@ -63,7 +68,10 @@ impl RedirHookConfigBuilder {
             matcher: self
                 .matcher
                 .map_or(None, |val| Some(val)),
-            target: self.target,
+            target: self
+                .target
+                .to_compact_string(),
+            code: "temporary".to_compact_string(),
         })
     }
 }
@@ -72,9 +80,8 @@ impl RedirHookConfigBuilder {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RedirHookConfig {
     matcher: Option<Box<dyn MatcherConfig>>,
-    target: String,
-    // TODO: Add custom proxy rules
-    // TODO: Add support for custom headers
+    target: Str,
+    code: Str,
 }
 
 #[typetag::serde(name = "redir")]
@@ -99,8 +106,8 @@ impl RedirHookConfig {
     /// # Returns
     ///
     /// * `RedirHookConfigBuilder` - The builder.
-    pub fn builder() -> RedirHookConfigBuilder {
-        RedirHookConfigBuilder { matcher: None, target: "http://localhost:8080".to_string() }
+    pub fn builder<'a>() -> RedirHookConfigBuilder<'a> {
+        RedirHookConfigBuilder { matcher: None, target: "http://localhost:8080", code: "temporary" }
     }
 
     /// Returns the target of the proxy path.
@@ -115,7 +122,7 @@ impl RedirHookConfig {
 
 /// Proxy path
 pub struct RedirHook {
-    _config: RedirHookConfig,
+    config: RedirHookConfig,
     matcher: Option<Box<dyn Matcher>>,
 }
 
@@ -139,7 +146,7 @@ impl RedirHook {
             None
         };
 
-        RedirHook { matcher, _config: config }
+        RedirHook { matcher, config: config }
     }
 }
 
@@ -148,8 +155,8 @@ impl Hook for RedirHook {
         if let Some(matcher) = &self.matcher { matcher.is_match(context) } else { true }
     }
 
-    fn phase(&self) -> &HookPhase {
-        &HookPhase::Rewrite
+    fn phases(&self) -> HookPhases {
+        make_bitflags!(HookPhase::Rewrite)
     }
 
     fn matcher_mut(&mut self) -> Option<&mut Box<dyn Matcher>> {
@@ -162,7 +169,34 @@ impl Hook for RedirHook {
         request: Request,
         _response: Option<Response>,
     ) -> VetisFutureResult<'a, (Request, Option<Response>)> {
-        let future = async move { Ok((request, Some(Response::builder().empty()))) };
+        let future = async move {
+            let status = match self
+                .config
+                .code
+                .as_str()
+            {
+                "temporary" => StatusCode::TEMPORARY_REDIRECT,
+                "permanent" => StatusCode::PERMANENT_REDIRECT,
+                "html" => StatusCode::OK,
+                _ => self
+                    .config
+                    .code
+                    .parse::<StatusCode>()
+                    .expect("Invalid status code"),
+            };
+
+            let header_value = HeaderValue::from_bytes(
+                self.config
+                    .target
+                    .as_bytes(),
+            )
+            .map_err(|e| VetisError::hook(e.to_compact_string()))?;
+            let response = Response::builder()
+                .header(LOCATION, header_value)
+                .status(status)
+                .empty();
+            Ok((request, Some(response)))
+        };
         Box::pin(future)
     }
 }

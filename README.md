@@ -36,11 +36,11 @@ let config = RedirHookConfig::builder()
 #### vetis.yaml
 
 ```yaml
-- name: "redir"
-  matcher:
-    type: "path"
-    paths:
-      - "/protected*"
+name: "redir"
+matcher:
+  type: "path"
+  paths:
+    - "/protected*"
 ```
 
 #### Configuration Options
