@@ -7,10 +7,9 @@ use compact_str::ToCompactString;
 use http::{HeaderValue, StatusCode};
 use serde::{Deserialize, Serialize};
 use vetis::{
-    HookPhases, Request, Response, Str, VetisFutureResult, VetisHook, VetisResult,
+    Request, Response, Str, VetisFutureResult, VetisHook, VetisResult,
     errors::{ConfigError, VetisError},
-    hook::{Hook, HookConfig, HookPhase},
-    make_bitflags,
+    hook::{Hook, HookConfig, HookPhase, HookPhases},
     matcher::{Matcher, MatcherConfig},
 };
 
@@ -156,7 +155,7 @@ impl Hook for RedirHook {
     }
 
     fn phases(&self) -> HookPhases {
-        make_bitflags!(HookPhase::Rewrite)
+        HookPhases::new(HookPhase::Rewrite)
     }
 
     fn matcher_mut(&mut self) -> Option<&mut Box<dyn Matcher>> {
