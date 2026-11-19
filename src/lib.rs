@@ -38,7 +38,11 @@ impl<'a> RedirHookConfigBuilder<'a> {
         self
     }
 
-    /// Allow set the target of the proxy path.
+    /// Allow set redirection target.
+    ///
+    /// # Arguments
+    ///
+    /// * `target` - Redirect to this uri
     ///
     /// # Returns
     ///
@@ -48,11 +52,25 @@ impl<'a> RedirHookConfigBuilder<'a> {
         self
     }
 
-    /// Build the `ProxyHookConfig` with the configured settings.
+    /// Allow set redirect code.
+    ///
+    /// # Arguments
+    ///
+    /// * `code` - How to redirect
     ///
     /// # Returns
     ///
-    /// * `VetisResult<ProxyHookConfig>` - The `ProxyHookConfig` with the configured settings.
+    /// * `Self` - The builder.
+    pub fn code(mut self, code: &'a str) -> Self {
+        self.code = code;
+        self
+    }
+
+    /// Build the `RedirHookConfig` with the configured settings.
+    ///
+    /// # Returns
+    ///
+    /// * `VetisResult<RedirHookConfig>` - The `RedirHookConfig` with the configured settings.
     pub fn build(self) -> VetisResult<RedirHookConfig> {
         if self
             .target
@@ -129,15 +147,15 @@ unsafe impl Send for RedirHook {}
 unsafe impl Sync for RedirHook {}
 
 impl RedirHook {
-    /// Create a new proxy path with provided configuration
+    /// Create a new redir hook with provided configuration
     ///
     /// # Arguments
     ///
-    /// * `config` - The proxy path configuration
+    /// * `config` - The redir hook configuration
     ///
     /// # Returns
     ///
-    /// * `RedirHook` - The proxy path
+    /// * `RedirHook` - The redir hook
     pub fn new(config: RedirHookConfig) -> RedirHook {
         let matcher = if let Some(matcher_config) = config.matcher() {
             Some(matcher_config.boxed_matcher())
