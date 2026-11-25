@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use vetis::{
     Request, Response, Str, VetisFutureResult, VetisHook, VetisResult,
     errors::{ConfigError, VetisError},
-    hook::{Hook, HookConfig, HookPhase, HookPhases},
+    hook::{Hook, HookConfig, HookPhase},
     matcher::{Matcher, MatcherConfig},
 };
 
@@ -30,7 +30,7 @@ impl<'a> RedirHookConfigBuilder<'a> {
     /// # Returns
     ///
     /// * `Self` - The builder.
-    pub fn add_matcher<M>(mut self, matcher: M) -> Self
+    pub fn matcher<M>(mut self, matcher: M) -> Self
     where
         M: MatcherConfig + Send + Sync + 'static,
     {
@@ -157,23 +157,32 @@ impl RedirHook {
     ///
     /// * `RedirHook` - The redir hook
     pub fn new(config: RedirHookConfig) -> RedirHook {
-        let matcher = if let Some(matcher_config) = config.matcher() {
-            Some(matcher_config.boxed_matcher())
-        } else {
-            None
-        };
-
-        RedirHook { matcher, config: config }
+        RedirHook { matcher: None, config: config }
     }
 }
 
 impl Hook for RedirHook {
+    fn setup<'a>(&'a mut self) -> VetisFutureResult<'a, ()> {
+        Box::pin(async move {
+            let matcher = if let Some(matcher_config) = self
+                .config
+                .matcher()
+            {
+                Some(matcher_config.boxed_matcher())
+            } else {
+                None
+            };
+            self.matcher = matcher;
+            Ok(())
+        })
+    }
+
     fn has_matches(&self, context: &Context) -> bool {
         if let Some(matcher) = &self.matcher { matcher.is_match(context) } else { true }
     }
 
-    fn phases(&self) -> HookPhases {
-        HookPhases::new(HookPhase::Rewrite)
+    fn phase(&self) -> HookPhase {
+        HookPhase::Rewrite
     }
 
     fn matcher_mut(&mut self) -> Option<&mut Box<dyn Matcher>> {
